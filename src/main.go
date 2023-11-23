@@ -12,9 +12,28 @@ import (
 	"os"
 )
 
-type LogEntry struct {
-	Ts    float64
-	Level string
+type CaddyLog struct {
+	Level   string
+	Logger  string
+	Message string
+	Ts      float64
+	Status  int
+	Request Request
+}
+
+type Request struct {
+	RemoteIp   string `json:"remote_ip"`
+	RemotePort string `json:"remote_port"`
+	ClientIp   string `json:"client_ip"`
+	Method     string
+	Proto      string
+	Host       string
+	Uri        string
+	Headers    Headers
+}
+
+type Headers struct {
+	UserAgent []string `json:"User-Agent"`
 }
 
 func main() {
@@ -24,21 +43,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Let's first read the `config.json` file
 	file, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatal("Error while opening file: ", err)
 	}
-	log.Printf("file: %s\n", file)
 
-	var logEntry LogEntry
-	err = json.Unmarshal(file, &logEntry)
+	var caddyLog CaddyLog
+	err = json.Unmarshal(file, &caddyLog)
 	if err != nil {
 		log.Fatal("Error during Unmarshal(): ", err)
 	}
 
-	log.Printf("ts: %f\n", logEntry.Ts)
-	log.Printf("level: %s\n", logEntry.Level)
+	log.Printf("Ts: %f\n", caddyLog.Ts)
+	log.Printf("Level: %s\n", caddyLog.Level)
+	log.Printf("Status: %d\n", caddyLog.Status)
+	log.Printf("Request: %s\n", caddyLog.Request)
 }
 
 func argsValidation(args []string) (string, error) {
