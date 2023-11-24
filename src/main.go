@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,36 +37,51 @@ type Headers struct {
 	UserAgent []string `json:"User-Agent"`
 }
 
+// var wg sync.WaitGroup
+var uriMap map[string]int
+
 func main() {
+	uriMap = make(map[string]int)
+
 	filename, err := argsValidation(os.Args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	file, err := os.ReadFile(filename)
-	if err != nil {
-		log.Fatal("Error while opening file: ", err)
+	reader, _ := os.Open(filename)
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		// wg.Add(1)
+		processLog(scanner.Text())
+	}
+	// wg.Wait()
+
+	for key, value := range uriMap {
+		log.Printf("%s counter: %d\n", key, value)
 	}
 
-	var caddyLog CaddyLog
-	err = json.Unmarshal(file, &caddyLog)
-	if err != nil {
-		log.Fatal("Error during Unmarshal(): ", err)
-	}
-
-	log.Printf("Ts: %f\n", caddyLog.Ts)
-	log.Printf("Level: %s\n", caddyLog.Level)
-	log.Printf("Status: %d\n", caddyLog.Status)
-	log.Printf("Request: %s\n", caddyLog.Request)
 }
 
 func argsValidation(args []string) (string, error) {
 	if len(args) < 2 {
 		return "", errors.New("log file missing")
 	}
-	// if !strings.Contains(args[1], ".log") {
-	// 	return "", errors.New("not a .log file")
-	// }
 	return args[1], nil
+}
+
+func processLog(logLine string) {
+	var caddyLog CaddyLog
+	err := json.Unmarshal([]byte(logLine), &caddyLog)
+	if err != nil {
+		log.Fatal("Error during Unmarshal(): ", err)
+	}
+
+	// log.Printf("Ts: %f\n", caddyLog.Ts)
+	// log.Printf("Level: %s\n", caddyLog.Level)
+	// log.Printf("Status: %d\n", caddyLog.Status)
+	// log.Printf("Request: %s\n", caddyLog.Request)
+
+	uriMap[caddyLog.Request.Uri]++
+	// wg.Done()
 }
